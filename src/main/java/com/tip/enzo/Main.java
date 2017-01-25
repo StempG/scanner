@@ -24,6 +24,9 @@ public class Main {
 
     private static final Logger logger_success = LoggerFactory.getLogger("success");
 
+    private static final int MAX_IMAGE_DECODE_TRY_TIME = 15;
+
+    private static final int imageSplitPieces = 4;
     /**
      * 1.拉取号码
      * <p>
@@ -42,13 +45,12 @@ public class Main {
         TianMaService tianMaService = context.getBean(TianMaService.class);
         XianlaiService xianlaiService = context.getBean(XianlaiService.class);
 
+        while (true) {
+            try {
 
-        try {
-
-            while (true) {
-                /*
-                 * step.1---获取可用号码
-                 */
+            /*
+             * step.1---获取可用号码
+             */
                 List<String> phoneNumbers;
                 try {
                     phoneNumbers = tianMaService.getPhoneNumber();
@@ -64,26 +66,26 @@ public class Main {
 
 
 
-
-                /*
-                 * step2.--- 开始处理
-                 */
+            /*
+             * step2.--- 开始处理
+             */
                 process(tianMaService, xianlaiService, phoneNumbers);
 
 
 
 
-                /*
-                 * step3.--- 释放号码
-                 */
+            /*
+             * step3.--- 释放号码
+             */
                 tianMaService.releasePhoneNumbers();
 
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.exit(0);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(0);
-        }
 
+
+        }
 
     }
 
@@ -104,7 +106,7 @@ public class Main {
                 retryTime++;
                 String imgFileName = xianlaiService.fetchVerifyCodeImages(cookie);
                 imgVerifyCode = xianlaiService.decodeVerifyCode(imgFileName);
-                if (StringUtils.isBlank(imgVerifyCode) || imgVerifyCode.length() != 4) {
+                if (StringUtils.isBlank(imgVerifyCode) || imgVerifyCode.length() != imageSplitPieces) {
                     continue;
                 }
                 imageVerifyCodeResult =
@@ -116,7 +118,7 @@ public class Main {
                 if (imageVerifyCodeResult.equals(ImageVerifyCodeResult.PHONE_NOT_EXIST)) {
                     break;
                 }
-                if (retryTime > 15) {
+                if (retryTime > MAX_IMAGE_DECODE_TRY_TIME) {
                     break;
                 }
             }
