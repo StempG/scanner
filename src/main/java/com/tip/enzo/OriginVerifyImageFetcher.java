@@ -2,6 +2,7 @@ package com.tip.enzo;
 
 /**
  * Created by enzo on 17/1/11.
+ *
  */
 @Deprecated
 public class OriginVerifyImageFetcher {
