@@ -15,6 +15,7 @@ import java.util.List;
 
 /**
  * Created by enzo on 17/1/4.
+ *
  */
 public class Main {
 
@@ -45,9 +46,10 @@ public class Main {
         try {
 
             while (true) {
-                //1.获取可用号码
+                /*
+                 * step.1---获取可用号码
+                 */
                 List<String> phoneNumbers;
-
                 try {
                     phoneNumbers = tianMaService.getPhoneNumber();
                 } catch (Exception e) {
@@ -56,70 +58,25 @@ public class Main {
                     continue;
                 }
 
-                //{ test code
-//                phoneNumbers = new ArrayList<>();
-//                phoneNumbers.add("15755260209");
-                //}
-
                 if (CollectionUtils.isEmpty(phoneNumbers)) {
                     continue;
                 }
 
 
-                for (String phoneNumber : phoneNumbers) {
-                    logger_deal.info("开始处理号码：" + phoneNumber);
-
-                    String cookie = xianlaiService.getForgetPasswordDocument();
-
-                    /*
-                     * 1.获取验证码图片
-                     * 2.解析图片验证码
-                     */
-                    String imgVerifyCode = "";
-                    int retryTime = 0;
-                    ImageVerifyCodeResult imageVerifyCodeResult = ImageVerifyCodeResult.NETWORK_ERROR;
-                    while (StringUtils.isBlank(imgVerifyCode)) {
-                        retryTime++;
-                        String imgFileName = xianlaiService.fetchVerifyCodeImages(cookie);
-                        imgVerifyCode = xianlaiService.decodeVerifyCode(imgFileName);
-                        if (StringUtils.isBlank(imgVerifyCode) || imgVerifyCode.length() != 4) {
-                            continue;
-                        }
-                        imageVerifyCodeResult =
-                                xianlaiService.verifyImageCodeAndSendMsg(phoneNumber, imgVerifyCode, cookie);
-
-                        if (imageVerifyCodeResult.equals(ImageVerifyCodeResult.SUCCESS)) {
-                            break;
-                        }
-                        if (imageVerifyCodeResult.equals(ImageVerifyCodeResult.PHONE_NOT_EXIST)) {
-                            break;
-                        }
-                        if (retryTime > 15) {
-                            break;
-                        }
-                    }
 
 
-                    switch (imageVerifyCodeResult) {
-                        case SUCCESS: {
-                            String smsCode = tianMaService.getSmsContent(phoneNumber);
+                /*
+                 * step2.--- 开始处理
+                 */
+                process(tianMaService, xianlaiService, phoneNumbers);
 
-                            if (StringUtils.isNotBlank(smsCode)) {
-                                if (xianlaiService.toNext(phoneNumber, imgVerifyCode, smsCode, cookie)) {
-                                    // 存储修改成功的号码
-                                    System.out.println("修改密码成功，号码：" + phoneNumber);
-                                    tianMaService.addOnBlackList(phoneNumber);
-                                    logger_success.info("修改密码成功：" + phoneNumber);
-                                }
-                            }
 
-                        }
-                    }
-                }
 
-                //释放号码
+
+                /*
+                 * step3.--- 释放号码
+                 */
                 tianMaService.releasePhoneNumbers();
-
 
             }
         } catch (Exception e) {
@@ -128,5 +85,58 @@ public class Main {
         }
 
 
+    }
+
+    private static void process(TianMaService tianMaService, XianlaiService xianlaiService, List<String> phoneNumbers) throws Exception {
+        for (String phoneNumber : phoneNumbers) {
+            logger_deal.info("开始处理号码：" + phoneNumber);
+
+            String cookie = xianlaiService.getForgetPasswordDocument();
+
+            /*
+             * 1.获取验证码图片
+             * 2.解析图片验证码
+             */
+            String imgVerifyCode = "";
+            int retryTime = 0;
+            ImageVerifyCodeResult imageVerifyCodeResult = ImageVerifyCodeResult.NETWORK_ERROR;
+            while (StringUtils.isBlank(imgVerifyCode)) {
+                retryTime++;
+                String imgFileName = xianlaiService.fetchVerifyCodeImages(cookie);
+                imgVerifyCode = xianlaiService.decodeVerifyCode(imgFileName);
+                if (StringUtils.isBlank(imgVerifyCode) || imgVerifyCode.length() != 4) {
+                    continue;
+                }
+                imageVerifyCodeResult =
+                        xianlaiService.verifyImageCodeAndSendMsg(phoneNumber, imgVerifyCode, cookie);
+
+                if (imageVerifyCodeResult.equals(ImageVerifyCodeResult.SUCCESS)) {
+                    break;
+                }
+                if (imageVerifyCodeResult.equals(ImageVerifyCodeResult.PHONE_NOT_EXIST)) {
+                    break;
+                }
+                if (retryTime > 15) {
+                    break;
+                }
+            }
+
+
+            switch (imageVerifyCodeResult) {
+                case SUCCESS: {
+                    String smsCode = tianMaService.getSmsContent(phoneNumber);
+
+                    if (StringUtils.isNotBlank(smsCode)) {
+                        if (xianlaiService.toNext(phoneNumber, imgVerifyCode, smsCode, cookie)) {
+                            // 存储修改成功的号码
+                            System.out.println("修改密码成功，号码：" + phoneNumber);
+                            tianMaService.addOnBlackList(phoneNumber);
+                            logger_success.info("修改密码成功：" + phoneNumber);
+                        }
+                    }
+
+                }
+            }
+        }
     }
 }
