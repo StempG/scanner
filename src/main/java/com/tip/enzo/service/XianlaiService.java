@@ -32,6 +32,8 @@ public class XianlaiService {
     @Value("${verify.image.path}")
     private String verifyImagePath;
 
+    private static final String PASSWORD = "l23456";
+
 
     public String getForgetPasswordDocument() {
         HttpGet get = new HttpGet("http://vip.xianlaihy.com/login/toForgetPassword");
@@ -270,8 +272,8 @@ public class XianlaiService {
 
 
         List<NameValuePair> list = new ArrayList<>();
-        list.add(new BasicNameValuePair("psw", "abc123456"));
-        list.add(new BasicNameValuePair("confirm", "abc123456"));
+        list.add(new BasicNameValuePair("psw", PASSWORD));
+        list.add(new BasicNameValuePair("confirm", PASSWORD));
         UrlEncodedFormEntity entity = new UrlEncodedFormEntity(list, "UTF-8");
         post.setEntity(entity);
 
