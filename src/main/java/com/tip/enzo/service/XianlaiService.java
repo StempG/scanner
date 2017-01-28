@@ -1,7 +1,11 @@
 package com.tip.enzo.service;
 
+import com.alibaba.fastjson.JSON;
 import com.tip.enzo.common.ImageVerifyCodeResult;
 import com.tip.enzo.helper.RecognizeImageHelper;
+import com.tip.enzo.model.LoginResultModel;
+import com.tip.enzo.model.UserInfoModel;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -16,9 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by enzo on 17/1/4.
@@ -131,7 +133,6 @@ public class XianlaiService {
 
 
     public String decodeVerifyCode(String fileName) {
-//        ImageFileLocationDefine.ORIGIN_IMAGES_LOCATION
         return RecognizeImageHelper.recognize(this.verifyImagePath, fileName);
 
     }
@@ -215,14 +216,13 @@ public class XianlaiService {
 
                 String result = EntityUtils.toString(response.getEntity());
                 if (!result.contains("1")) {
-//                    System.out.println("to Next 失败");
                     return false;
                 }
+
+
                 //change password
-
-
-                getDocument(cookie);
-                Boolean x = changePwd(cookie);
+                getChangePasswordPage(cookie);
+                Boolean x = changePassword(cookie);
                 if (x != null) return x;
 
 
@@ -236,7 +236,7 @@ public class XianlaiService {
     }
 
 
-    private void getDocument(String cookie) {
+    private void getChangePasswordPage(String cookie) {
         HttpGet get = new HttpGet("http://vip.xianlaihy.com/login/toModifyPassword");
         get.setHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\n");
         get.setHeader("Accept-Encoding", "gzip, deflate, sdch");
@@ -255,7 +255,7 @@ public class XianlaiService {
 
     }
 
-    private static Boolean changePwd(String cookie) throws IOException {
+    private static Boolean changePassword(String cookie) throws IOException {
         String changePasswordUrl = "http://vip.xianlaihy.com/login/updatePsw?t=" + getRandomNumber();
         HttpPost post = new HttpPost(changePasswordUrl);
         post.setHeader("Host", "vip.xianlaihy.com");
@@ -291,6 +291,190 @@ public class XianlaiService {
             }
         }
         return null;
+    }
+
+
+    public Map<String, String> getUserLoginPage() throws Exception {
+        Map<String, String> map = new HashMap<>();
+        StringBuilder pageCookies = getUserLoginPageCookies();
+
+        //get shrioSessionId & fileName
+        String fileName = getImageAndCookieFromLoginPage(pageCookies);
+
+        map.put("cookie", pageCookies.toString());
+
+        String imgVerifyCode = decodeVerifyCode(fileName);
+        map.put("fileName", imgVerifyCode);
+
+        return map;
+    }
+
+
+    public LoginResultModel login(String cookie, String phoneNumber, String verifyCode) throws Exception {
+        String url = "http://vip.xianlaihy.com/login/login?t=" + getRandomNumber();
+        HttpPost post = new HttpPost(url);
+        post.setHeader("Accept", "application/json, text/javascript, */*; q=0.01");
+        post.setHeader("Accept-Encoding", "gzip, deflate");
+        post.setHeader("Accept-Language", "zh-CN,zh;q=0.8");
+        post.setHeader("Connection", "keep-alive");
+        post.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+        post.setHeader("Cookie", cookie);
+        post.setHeader("Host", "vip.xianlaihy.com");
+        post.setHeader("Origin", "http://vip.xianlaihy.com");
+        post.setHeader("Referer", "http://vip.xianlaihy.com/login/toLogin");
+        post.setHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.95 Safari/537.36");
+        post.setHeader("X-Requested-With", "XMLHttpRequest");
+
+        List<NameValuePair> list = new ArrayList<>();
+        list.add(new BasicNameValuePair("username", phoneNumber));
+        list.add(new BasicNameValuePair("password", PASSWORD));
+        list.add(new BasicNameValuePair("verifycode", verifyCode));
+        UrlEncodedFormEntity entity = new UrlEncodedFormEntity(list, "UTF-8");
+        post.setEntity(entity);
+
+//        HttpClients.createDefault();
+        DefaultHttpClient client = new DefaultHttpClient();
+        HttpResponse response = client.execute(post);
+
+        for (Cookie ck : client.getCookieStore().getCookies()) {
+            System.out.println(ck.getName() + "=" + ck.getValue());
+        }
+
+        if (response.getStatusLine().getStatusCode() >= 200 && response.getStatusLine().getStatusCode() < 300) {
+            String entityStr = EntityUtils.toString(response.getEntity());
+            return JSON.parseObject(entityStr, LoginResultModel.class);
+
+        }
+        return null;
+
+    }
+
+//
+//    public void toGameRecharge(String cookie){
+//        String url = "http://vip.xianlaihy.com/agent/toGameRecharge?v=" + getRandomNumber();
+//        HttpGet get = new HttpGet(url);
+//        get.set
+//
+//    }
+
+    public UserInfoModel getUserInfo(String cookie) {
+        String url = "http://vip.xianlaihy.com/gameapi/getUserInfo?t=" + getRandomNumber();
+        HttpGet get = new HttpGet(url);
+        get.setHeader("Accept", "application/json, text/javascript, */*; q=0.01");
+        get.setHeader("Accept-Encoding", "gzip, deflate, sdch");
+        get.setHeader("Accept-Language", "zh-CN,zh;q=0.8");
+        get.setHeader("Connection", "keep-alive");
+        get.setHeader("Cookie", cookie);
+        get.setHeader("Host", "vip.xianlaihy.com");
+        get.setHeader("Referer", "http://vip.xianlaihy.com/agent/toGameRecharge?v=0.08143013295259172");
+        get.setHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.95 Safari/537.36");
+        get.setHeader("X-Requested-With", "XMLHttpRequest");
+
+        try {
+
+            HttpResponse response = HttpClients.createDefault().execute(get);
+            if (response.getStatusLine().getStatusCode() >= 200 && response.getStatusLine().getStatusCode() < 300) {
+                String json = EntityUtils.toString(response.getEntity());
+                return JSON.parseObject(json, UserInfoModel.class);
+            }
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+
+    private StringBuilder getUserLoginPageCookies() throws IOException {
+        DefaultHttpClient client = new DefaultHttpClient();
+
+        String url = "http://vip.xianlaihy.com/login/toLogin";
+        HttpGet get = new HttpGet(url);
+        get.setHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+        get.setHeader("Accept-Encoding", "gzip, deflate, sdch");
+        get.setHeader("Accept-Language", "zh-CN,zh;q=0.8");
+        get.setHeader("Connection", "keep-alive");
+        get.setHeader("Host", "vip.xianlaihy.com");
+        get.setHeader("Upgrade-Insecure-Requests", "1");
+        get.setHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.95 Safari/537.36");
+
+        client.execute(get);
+
+        String acw_tc = "";
+        String aliyungf_tc = "";
+        for (Cookie cookie : client.getCookieStore().getCookies()) {
+            if (cookie.getName().equals("aliyungf_tc")) {
+                aliyungf_tc = cookie.getValue();
+            }
+            if (cookie.getName().equals("acw_tc")) {
+                acw_tc = cookie.getValue();
+            }
+            System.out.println(cookie.getName() + "=" + cookie.getValue());
+
+        }
+
+        StringBuilder cookie = new StringBuilder();
+        if (StringUtils.isNotBlank(acw_tc) && StringUtils.isNotBlank(aliyungf_tc)) {
+            cookie.append("aliyungf_tc=").append(aliyungf_tc).append("; acw_tc=").append(acw_tc);
+        }
+        return cookie;
+    }
+
+    private String getImageAndCookieFromLoginPage(StringBuilder pageCookies) throws Exception {
+        DefaultHttpClient client = new DefaultHttpClient();
+        String fileLocation = this.verifyImagePath + "origin/";
+        String fileName = String.valueOf(new Date().getTime()) + ".jpg";
+        File file = new File(fileLocation + fileName);
+        OutputStream os = new FileOutputStream(file);
+
+
+        String url = "http://vip.xianlaihy.com/login/getCaptcher?t=" + getRandomNumber();
+        HttpGet get = new HttpGet(url);
+        get.setHeader("Accept", "image/webp,image/*,*/*;q=0.8");
+        get.setHeader("Accept-Encoding", "gzip, deflate, sdch");
+        get.setHeader("Accept-Language", "zh-CN,zh;q=0.8");
+        get.setHeader("Connection", "keep-alive");
+        get.setHeader("Cookie", pageCookies.toString());
+        get.setHeader("Host", "vip.xianlaihy.com");
+        get.setHeader("Referer", "http://vip.xianlaihy.com/login/toLogin");
+        get.setHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.95 Safari/537.36");
+
+        HttpResponse response = client.execute(get);
+
+        String SHRIOSESSIONID = "";
+        for (Cookie cookie : client.getCookieStore().getCookies()) {
+            System.out.println(cookie.getName() + "=" + cookie.getValue());
+            if (cookie.getName().equals("SHRIOSESSIONID")) {
+                SHRIOSESSIONID = cookie.getValue();
+            }
+        }
+
+        if (StringUtils.isBlank(SHRIOSESSIONID)) {
+            return null;
+        }
+
+        pageCookies.append("; SHRIOSESSIONID=").append(SHRIOSESSIONID);
+
+        InputStream is = response.getEntity().getContent();
+
+        // TODO: 17/1/28
+        byte[] buff = new byte[1024];
+        while (true) {
+            int readLength = is.read(buff);
+            if (readLength == -1) {
+                break;
+            }
+            byte[] temp = new byte[readLength];
+            System.arraycopy(buff, 0, temp, 0, readLength);
+            //写入文件
+            os.write(temp);
+        }
+        is.close();
+        os.close();
+
+        return fileName;
     }
 
 

