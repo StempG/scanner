@@ -1,8 +1,12 @@
 package com.tip.enzo;
 
+import com.tip.enzo.model.LoginResultModel;
+import com.tip.enzo.model.UserInfoModel;
 import com.tip.enzo.service.XianlaiService;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+import java.util.Map;
 
 /**
  * Created by enzo on 17/1/16.
@@ -48,9 +52,76 @@ public class TestMethods {
 ////        String cookie = xianlaiService.getForgetPasswordDocument(client, httpContext);
 
 
-        xianlaiService.getUserLoginPage();
+//        xianlaiService.getUserLoginPage();
+
+
+        //login & fetch userInfo
+        Integer cardNum = null;
+
+        String phoneNumber = "18767122251";
+        Map<String, String> params = getLoginParams(xianlaiService);
+        LoginResultModel resultModel = getLoginResult(xianlaiService, phoneNumber, params);
+
+        if (resultModel == null) {
+            //登录失败
+
+
+            // 存储修改成功的号码
+            System.out.println("修改密码成功，号码：" + phoneNumber);
+        } else {
+            if (!resultModel.getResult().contains("Err")) {
+                //登录成功
+                if (resultModel.getResult().equals("py")) {
+
+                    UserInfoModel userInfo = xianlaiService.getUserInfo(params.get("cookie"));
+                    cardNum = userInfo.getCardNum();
+                }
+            }
+
+        }
+
+        if (cardNum == null) {
+            System.out.println("修改密码成功，号码：" + phoneNumber);
+
+        } else {
+            System.out.println("修改密码成功，号码：" + phoneNumber + "卡的数量：" + cardNum);
+        }
+
+
+
 
 
 
     }
+
+
+    private static Map<String, String> getLoginParams(XianlaiService xianlaiService) {
+        try {
+            return xianlaiService.getUserLoginPage();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+
+    }
+
+
+    private static LoginResultModel getLoginResult(XianlaiService xianlaiService, String phone, Map<String, String> params) {
+        if (params == null) {
+            return null;
+        }
+        try {
+            String cookie = params.get("cookie");
+            //// TODO: 17/1/28 验证码
+            String verifyCode = params.get("fileName");
+
+            return xianlaiService.login(cookie, phone, verifyCode);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
 }

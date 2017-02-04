@@ -1,19 +1,14 @@
 package com.tip.enzo;
 
-import com.tip.enzo.common.ImageVerifyCodeResult;
-import com.tip.enzo.model.LoginResultModel;
-import com.tip.enzo.model.UserInfoModel;
+import com.tip.enzo.service.ScannerService;
 import com.tip.enzo.service.TianMaService;
 import com.tip.enzo.service.XianlaiService;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
-import org.springframework.util.CollectionUtils;
 
-import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -23,13 +18,6 @@ import java.util.Map;
 public class Main {
 
 
-    private static final Logger logger_deal = LoggerFactory.getLogger("deal");
-
-    private static final Logger logger_success = LoggerFactory.getLogger("success");
-
-    private static final int MAX_IMAGE_DECODE_TRY_TIME = 15;
-
-    private static final int imageSplitPieces = 4;
     /**
      * 1.拉取号码
      * <p>
@@ -48,169 +36,186 @@ public class Main {
         TianMaService tianMaService = context.getBean(TianMaService.class);
         XianlaiService xianlaiService = context.getBean(XianlaiService.class);
 
-        while (true) {
-            try {
 
-                // TODO: 17/1/25 多线程、不保存验证码图片、抓取卡的数量和地区、打成jar包
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(15, 20, 300000, TimeUnit.MILLISECONDS,
+                new ArrayBlockingQueue<>(15));
 
-
-                /*
-                 * step.1---获取可用号码
-                 */
-                List<String> phoneNumbers;
-                try {
-                    phoneNumbers = tianMaService.getPhoneNumber();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    Thread.sleep(10000);
-                    continue;
-                }
-
-                if (CollectionUtils.isEmpty(phoneNumbers)) {
-                    continue;
-                }
-
-
-
-
-                /*
-                 * step2.--- 开始处理
-                 */
-                process(tianMaService, xianlaiService, phoneNumbers);
-
-
-
-
-                /*
-                 * step3.--- 释放号码
-                 */
-                tianMaService.releasePhoneNumbers();
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                System.exit(0);
-            }
-
-
+        for (int i = 0; i < 15; i++) {
+            ScannerService scanner = new ScannerService(xianlaiService, tianMaService);
+            executor.execute(scanner);
+            System.out.println("线程池中线程数目：" + executor.getPoolSize() + "，队列中等待执行的任务数目：" +
+                    executor.getQueue().size() + "，已执行玩别的任务数目：" + executor.getCompletedTaskCount());
         }
+        executor.shutdown();
+
+
+//        doScan(tianMaService, xianlaiService);
 
     }
 
-    private static void process(TianMaService tianMaService, XianlaiService xianlaiService, List<String> phoneNumbers) throws Exception {
-        for (String phoneNumber : phoneNumbers) {
-            logger_deal.info("开始处理号码：" + phoneNumber);
+//    private static void doScan(TianMaService tianMaService, XianlaiService xianlaiService) {
+//        while (true) {
+//            try {
+//
+//                // TODO: 17/1/25 多线程、不保存验证码图片、抓取卡的数量和地区、打成jar包
+//
+//
+//                /*
+//                 * step.1---获取可用号码
+//                 */
+//                List<String> phoneNumbers;
+//                try {
+//                    phoneNumbers = tianMaService.getPhoneNumber();
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                    Thread.sleep(10000);
+//                    continue;
+//                }
+//
+//                if (CollectionUtils.isEmpty(phoneNumbers)) {
+//                    continue;
+//                }
+//
+//
+//
+//
+//                /*
+//                 * step2.--- 开始处理
+//                 */
+//                process(tianMaService, xianlaiService, phoneNumbers);
+//
+//
+//
+//
+//                /*
+//                 * step3.--- 释放号码
+//                 */
+//                tianMaService.releasePhoneNumbers();
+//
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                System.exit(0);
+//            }
+//
+//
+//        }
+//    }
 
-            String cookie = xianlaiService.getForgetPasswordDocument();
+//    private static void process(TianMaService tianMaService, XianlaiService xianlaiService, List<String> phoneNumbers) throws Exception {
+//        for (String phoneNumber : phoneNumbers) {
+//            logger_deal.info("开始处理号码：" + phoneNumber);
+//
+//            String cookie = xianlaiService.getForgetPasswordDocument();
+//
+//            /*
+//             * 1.获取验证码图片
+//             * 2.解析图片验证码
+//             */
+//            String imgVerifyCode = "";
+//            int retryTime = 0;
+//            ImageVerifyCodeResult imageVerifyCodeResult = ImageVerifyCodeResult.NETWORK_ERROR;
+//            while (StringUtils.isBlank(imgVerifyCode)) {
+//                retryTime++;
+//                String imgFileName = xianlaiService.fetchVerifyCodeImages(cookie);
+//                imgVerifyCode = xianlaiService.decodeVerifyCode(imgFileName);
+//                if (StringUtils.isBlank(imgVerifyCode) || imgVerifyCode.length() != imageSplitPieces) {
+//                    continue;
+//                }
+//                imageVerifyCodeResult =
+//                        xianlaiService.verifyImageCodeAndSendMsg(phoneNumber, imgVerifyCode, cookie);
+//
+//                if (imageVerifyCodeResult.equals(ImageVerifyCodeResult.SUCCESS)) {
+//                    break;
+//                }
+//                if (imageVerifyCodeResult.equals(ImageVerifyCodeResult.PHONE_NOT_EXIST)) {
+//                    break;
+//                }
+//                if (retryTime > MAX_IMAGE_DECODE_TRY_TIME) {
+//                    break;
+//                }
+//            }
+//
+//
+//            if (!imageVerifyCodeResult.equals(ImageVerifyCodeResult.SUCCESS)) {
+//                return;
+//            }
+//
+//            String smsCode = tianMaService.getSmsContent(phoneNumber);
+//
+//            if (StringUtils.isNotBlank(smsCode)) {
+//                if (xianlaiService.toNext(phoneNumber, imgVerifyCode, smsCode, cookie)) {
+//
+//
+//                    //login & fetch userInfo
+//                    Integer cardNum = null;
+//
+//                    Map<String, String> params = getLoginParams(xianlaiService);
+//                    LoginResultModel resultModel = getLoginResult(xianlaiService, phoneNumber, params);
+//
+//                    if (resultModel == null) {
+//                        //登录失败
+//
+//
+//                        // 存储修改成功的号码
+//                        System.out.println("修改密码成功，号码：" + phoneNumber);
+//                        logger_success.info("修改密码成功：" + phoneNumber);
+//                    } else {
+//                        if (!resultModel.getResult().contains("Err")) {
+//                            //登录成功
+//                            if (resultModel.getResult().equals("py")) {
+//
+//                                UserInfoModel userInfo = xianlaiService.getUserInfo(params.get("cookie"));
+//                                cardNum = userInfo.getCardNum();
+//                            }
+//                        }
+//
+//                    }
+//
+//                    if (cardNum == null) {
+//                        System.out.println("修改密码成功，号码：" + phoneNumber);
+//                        logger_success.info("修改密码成功：" + phoneNumber);
+//
+//                    } else {
+//                        System.out.println("修改密码成功，号码：" + phoneNumber + "卡的数量：" + cardNum);
+//                        logger_success.info("修改密码成功：" + phoneNumber + "卡的数量" + cardNum);
+//                    }
+//
+//
+//                    //加入黑名单
+//                    tianMaService.addOnBlackList(phoneNumber);
+//                }
+//            }
+//
+//        }
+//    }
 
-            /*
-             * 1.获取验证码图片
-             * 2.解析图片验证码
-             */
-            String imgVerifyCode = "";
-            int retryTime = 0;
-            ImageVerifyCodeResult imageVerifyCodeResult = ImageVerifyCodeResult.NETWORK_ERROR;
-            while (StringUtils.isBlank(imgVerifyCode)) {
-                retryTime++;
-                String imgFileName = xianlaiService.fetchVerifyCodeImages(cookie);
-                imgVerifyCode = xianlaiService.decodeVerifyCode(imgFileName);
-                if (StringUtils.isBlank(imgVerifyCode) || imgVerifyCode.length() != imageSplitPieces) {
-                    continue;
-                }
-                imageVerifyCodeResult =
-                        xianlaiService.verifyImageCodeAndSendMsg(phoneNumber, imgVerifyCode, cookie);
-
-                if (imageVerifyCodeResult.equals(ImageVerifyCodeResult.SUCCESS)) {
-                    break;
-                }
-                if (imageVerifyCodeResult.equals(ImageVerifyCodeResult.PHONE_NOT_EXIST)) {
-                    break;
-                }
-                if (retryTime > MAX_IMAGE_DECODE_TRY_TIME) {
-                    break;
-                }
-            }
+//    private static Map<String, String> getLoginParams(XianlaiService xianlaiService) {
+//        try {
+//            return xianlaiService.getUserLoginPage();
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//        return null;
+//
+//    }
 
 
-            if (!imageVerifyCodeResult.equals(ImageVerifyCodeResult.SUCCESS)) {
-                return;
-            }
-
-            String smsCode = tianMaService.getSmsContent(phoneNumber);
-
-            if (StringUtils.isNotBlank(smsCode)) {
-                if (xianlaiService.toNext(phoneNumber, imgVerifyCode, smsCode, cookie)) {
-
-
-                    //login & fetch userInfo
-                    Integer cardNum = null;
-
-                    Map<String, String> params = getLoginParams(xianlaiService);
-                    LoginResultModel resultModel = getLoginResult(xianlaiService, phoneNumber, params);
-
-                    if (resultModel == null) {
-                        //登录失败
-
-
-                        // 存储修改成功的号码
-                        System.out.println("修改密码成功，号码：" + phoneNumber);
-                        logger_success.info("修改密码成功：" + phoneNumber);
-                    } else {
-                        if (!resultModel.getResult().contains("Err")) {
-                            //登录成功
-                            if (resultModel.getResult().equals("py")) {
-
-                                UserInfoModel userInfo = xianlaiService.getUserInfo(params.get("cookie"));
-                                cardNum = userInfo.getCardNum();
-                            }
-                        }
-
-                    }
-
-                    if (cardNum == null) {
-                        System.out.println("修改密码成功，号码：" + phoneNumber);
-                        logger_success.info("修改密码成功：" + phoneNumber);
-
-                    } else {
-                        System.out.println("修改密码成功，号码：" + phoneNumber + "卡的数量：" + cardNum);
-                        logger_success.info("修改密码成功：" + phoneNumber + "卡的数量" + cardNum);
-                    }
-
-
-                    //加入黑名单
-                    tianMaService.addOnBlackList(phoneNumber);
-                }
-            }
-
-        }
-    }
-
-    private static Map<String, String> getLoginParams(XianlaiService xianlaiService) {
-        try {
-            return xianlaiService.getUserLoginPage();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-
-    }
-
-
-    private static LoginResultModel getLoginResult(XianlaiService xianlaiService, String phone, Map<String, String> params) {
-        if (params == null) {
-            return null;
-        }
-        try {
-            String cookie = params.get("cookie");
-            //// TODO: 17/1/28 验证码
-            String verifyCode = params.get("fileName");
-
-            return xianlaiService.login(cookie, phone, verifyCode);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return null;
-    }
+//    private static LoginResultModel getLoginResult(XianlaiService xianlaiService, String phone, Map<String, String> params) {
+//        if (params == null) {
+//            return null;
+//        }
+//        try {
+//            String cookie = params.get("cookie");
+//            //// TODO: 17/1/28 验证码
+//            String verifyCode = params.get("fileName");
+//
+//            return xianlaiService.login(cookie, phone, verifyCode);
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//
+//        return null;
+//    }
 
 }

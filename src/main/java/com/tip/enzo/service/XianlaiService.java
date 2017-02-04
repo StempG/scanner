@@ -88,7 +88,7 @@ public class XianlaiService {
     public String fetchVerifyCodeImages(String cookie) {
         try {
             String fileLocation = this.verifyImagePath + "origin/";
-            String fileName = String.valueOf(new Date().getTime()) + ".jpg";
+            String fileName = Thread.currentThread().getName() + "_" + String.valueOf(new Date().getTime()) + ".jpg";
             File file = new File(fileLocation + fileName);
             OutputStream os = new FileOutputStream(file);
 
