@@ -6,6 +6,7 @@ import java.awt.color.ColorSpace;
 import java.awt.image.*;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 
 /**
  * Created by enzo on 17/1/9.
@@ -104,6 +105,20 @@ class GreyImages {
         return bi;
 
     }
+
+
+    static BufferedImage greyImages(InputStream inputStream) throws Exception {
+
+        BufferedImage bi = ImageIO.read(inputStream);
+        GreyImages flt = new GreyImages(bi);
+        flt.changeGrey();
+        flt.getGrey();
+        flt.getBrighten();
+        bi = flt.getProcessedImg();
+        return bi;
+
+    }
+
 //
 //
 //    public static void main(String[] args) throws IOException {

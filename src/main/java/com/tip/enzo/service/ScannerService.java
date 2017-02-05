@@ -9,8 +9,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by enzo on 17/1/4.
@@ -36,12 +38,7 @@ public class ScannerService implements Runnable {
 
     @Override
     public void run() {
-
-
-        System.out.println("当前线程为：" + Thread.currentThread().getName());
         doScan(tianMaService, xianlaiService);
-
-
     }
 
 
@@ -109,8 +106,8 @@ public class ScannerService implements Runnable {
             ImageVerifyCodeResult imageVerifyCodeResult = ImageVerifyCodeResult.NETWORK_ERROR;
             while (StringUtils.isBlank(imgVerifyCode)) {
                 retryTime++;
-                String imgFileName = xianlaiService.fetchVerifyCodeImages(cookie);
-                imgVerifyCode = xianlaiService.decodeVerifyCode(imgFileName);
+                InputStream inputStream = xianlaiService.fetchVerifyCodeImages(cookie);
+                imgVerifyCode = xianlaiService.decodeVerifyCode(inputStream);
                 if (StringUtils.isBlank(imgVerifyCode) || imgVerifyCode.length() != imageSplitPieces) {
                     continue;
                 }
@@ -147,27 +144,25 @@ public class ScannerService implements Runnable {
                     //login & fetch userInfo
                     Integer cardNum = null;
 
-                    Map<String, String> params = getLoginParams(xianlaiService);
-                    LoginResultModel resultModel = getLoginResult(xianlaiService, phoneNumber, params);
+                    try {
+                        ConcurrentHashMap<String, String> params = getLoginParams(xianlaiService);
+                        LoginResultModel resultModel = getLoginResult(xianlaiService, phoneNumber, params);
 
-                    if (resultModel == null) {
-                        //登录失败
+                        if (resultModel != null) {
+                            if (!resultModel.getResult().contains("Err")) {
+                                //登录成功
+                                if (resultModel.getResult().equals("py")) {
 
-
-                        // 存储修改成功的号码
-                        System.out.println("修改密码成功，号码：" + phoneNumber);
-                        logger_success.info("修改密码成功：" + phoneNumber);
-                    } else {
-                        if (!resultModel.getResult().contains("Err")) {
-                            //登录成功
-                            if (resultModel.getResult().equals("py")) {
-
-                                UserInfoModel userInfo = xianlaiService.getUserInfo(params.get("cookie"));
-                                cardNum = userInfo.getCardNum();
+                                    UserInfoModel userInfo = xianlaiService.getUserInfo(params.get("cookie"));
+                                    cardNum = userInfo.getCardNum();
+                                }
                             }
                         }
+                    } catch (Exception e) {
+                        // TODO: 17/2/5 response 乱码
 
                     }
+
 
                     if (cardNum == null) {
                         System.out.println("修改密码成功，号码：" + phoneNumber);
@@ -187,7 +182,7 @@ public class ScannerService implements Runnable {
         }
     }
 
-    private static Map<String, String> getLoginParams(XianlaiService xianlaiService) {
+    private static ConcurrentHashMap<String, String> getLoginParams(XianlaiService xianlaiService) {
         try {
             return xianlaiService.getUserLoginPage();
         } catch (Exception e) {

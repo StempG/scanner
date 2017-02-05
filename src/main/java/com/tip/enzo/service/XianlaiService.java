@@ -16,11 +16,13 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by enzo on 17/1/4.
@@ -29,10 +31,6 @@ import java.util.*;
  */
 @Service
 public class XianlaiService {
-
-
-    @Value("${verify.image.path}")
-    private String verifyImagePath;
 
     private static final String PASSWORD = "l23456";
 
@@ -85,12 +83,8 @@ public class XianlaiService {
      *
      * @return fileName 文件名，不含文件路径
      */
-    public String fetchVerifyCodeImages(String cookie) {
+    public InputStream fetchVerifyCodeImages(String cookie) {
         try {
-            String fileLocation = this.verifyImagePath + "origin/";
-            String fileName = Thread.currentThread().getName() + "_" + String.valueOf(new Date().getTime()) + ".jpg";
-            File file = new File(fileLocation + fileName);
-            OutputStream os = new FileOutputStream(file);
 
             String url = "http://vip.xianlaihy.com/login/getForCaptcher?t=" + getRandomNumber();
 
@@ -105,24 +99,24 @@ public class XianlaiService {
             get.setHeader("Cookie", cookie);
             HttpResponse response = HttpClients.createDefault().execute(get);
 
+            return response.getEntity().getContent();
 
-            InputStream is = response.getEntity().getContent();
+//            byte[] buff = new byte[1024];
+//            while (true) {
+//                int readLength = is.read(buff);
+//                if (readLength == -1) {
+//                    break;
+//                }
+//                byte[] temp = new byte[readLength];
+//                System.arraycopy(buff, 0, temp, 0, readLength);
+//                //写入文件
+//                os.write(temp);
+//            }
+//            is.close();
+//            os.close();
 
-            byte[] buff = new byte[1024];
-            while (true) {
-                int readLength = is.read(buff);
-                if (readLength == -1) {
-                    break;
-                }
-                byte[] temp = new byte[readLength];
-                System.arraycopy(buff, 0, temp, 0, readLength);
-                //写入文件
-                os.write(temp);
-            }
-            is.close();
-            os.close();
+//            return fileName;
 
-            return fileName;
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -132,9 +126,8 @@ public class XianlaiService {
     }
 
 
-    public String decodeVerifyCode(String fileName) {
-        return RecognizeImageHelper.recognize(this.verifyImagePath, fileName);
-
+    public String decodeVerifyCode(InputStream inputStream) {
+        return RecognizeImageHelper.recognize(inputStream);
     }
 
 
@@ -294,16 +287,16 @@ public class XianlaiService {
     }
 
 
-    public Map<String, String> getUserLoginPage() throws Exception {
-        Map<String, String> map = new HashMap<>();
+    public ConcurrentHashMap<String, String> getUserLoginPage() throws Exception {
+        ConcurrentHashMap<String, String> map = new ConcurrentHashMap<>();
         StringBuilder pageCookies = getUserLoginPageCookies();
 
         //get shrioSessionId & fileName
-        String fileName = getImageAndCookieFromLoginPage(pageCookies);
+        InputStream inputStream = getImageAndCookieFromLoginPage(pageCookies);
 
         map.put("cookie", pageCookies.toString());
 
-        String imgVerifyCode = decodeVerifyCode(fileName);
+        String imgVerifyCode = decodeVerifyCode(inputStream);
         map.put("fileName", imgVerifyCode);
 
         return map;
@@ -422,13 +415,8 @@ public class XianlaiService {
         return cookie;
     }
 
-    private String getImageAndCookieFromLoginPage(StringBuilder pageCookies) throws Exception {
+    private InputStream getImageAndCookieFromLoginPage(StringBuilder pageCookies) throws Exception {
         DefaultHttpClient client = new DefaultHttpClient();
-        String fileLocation = this.verifyImagePath + "origin/";
-        String fileName = String.valueOf(new Date().getTime()) + ".jpg";
-        File file = new File(fileLocation + fileName);
-        OutputStream os = new FileOutputStream(file);
-
 
         String url = "http://vip.xianlaihy.com/login/getCaptcher?t=" + getRandomNumber();
         HttpGet get = new HttpGet(url);
@@ -457,24 +445,8 @@ public class XianlaiService {
 
         pageCookies.append("; SHRIOSESSIONID=").append(SHRIOSESSIONID);
 
-        InputStream is = response.getEntity().getContent();
+        return response.getEntity().getContent();
 
-        // TODO: 17/1/28
-        byte[] buff = new byte[1024];
-        while (true) {
-            int readLength = is.read(buff);
-            if (readLength == -1) {
-                break;
-            }
-            byte[] temp = new byte[readLength];
-            System.arraycopy(buff, 0, temp, 0, readLength);
-            //写入文件
-            os.write(temp);
-        }
-        is.close();
-        os.close();
-
-        return fileName;
     }
 
 

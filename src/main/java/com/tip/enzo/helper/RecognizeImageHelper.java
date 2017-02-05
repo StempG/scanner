@@ -7,6 +7,7 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,8 +42,9 @@ public class RecognizeImageHelper {
         return false;
     }
 
-    private static BufferedImage removeBackground(String fileLocation, String fileName) throws Exception {
-        return GreyImages.greyImages(fileLocation, fileName);
+
+    private static BufferedImage removeBackground(InputStream inputStream) throws Exception {
+        return GreyImages.greyImages(inputStream);
     }
 
 
@@ -148,7 +150,6 @@ public class RecognizeImageHelper {
     private static Map<BufferedImage, String> loadTrainData() throws Exception {
         if (trainMap == null) {
             Map<BufferedImage, String> map = new HashMap<>();
-//            ImageFileLocationDefine.LETTER_PACK_LOCATION
             File dir = ResourceUtils.getFile("classpath:base/imgs/letters");
             File[] files = dir.listFiles();
             if (files == null) {
@@ -202,11 +203,11 @@ public class RecognizeImageHelper {
         return result;
     }
 
-    public static String recognize(String fileLocation, String fileName) {
-//        Map<BufferedImage, String> map = loadTrainData();
+
+    public static String recognize(InputStream inputStream) {
         String result = "";
         try {
-            BufferedImage img = removeBackground(fileLocation, fileName);
+            BufferedImage img = removeBackground(inputStream);
             List<BufferedImage> listImg = splitImage(img);
             for (BufferedImage bi : listImg) {
                 String letter = getSingleCharOcr(bi, trainMap);
@@ -216,7 +217,7 @@ public class RecognizeImageHelper {
                 result += letter;
             }
         } catch (Exception ignored) {
-            ignored.printStackTrace();
+//            ignored.printStackTrace();
         }
 
         return result;
