@@ -7,6 +7,7 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -147,7 +148,7 @@ public class RecognizeImageHelper {
     }
 
 
-    private static Map<BufferedImage, String> loadTrainData() throws Exception {
+    private static void loadTrainData() throws Exception {
         if (trainMap == null) {
             Map<BufferedImage, String> map = new HashMap<>();
             File dir = ResourceUtils.getFile("classpath:base/imgs/letters");
@@ -171,7 +172,6 @@ public class RecognizeImageHelper {
             }
             trainMap = map;
         }
-        return trainMap;
     }
 
     private static String getSingleCharOcr(BufferedImage img, Map<BufferedImage, String> map) {
@@ -215,6 +215,9 @@ public class RecognizeImageHelper {
                     letter = letter.substring(1);
                 }
                 result += letter;
+
+//                File file = new File("/Users/enzo/Desktop/dustbin/" + letter + ".jpg");
+//                ImageIO.write(bi, "JPG", file);
             }
         } catch (Exception ignored) {
 //            ignored.printStackTrace();
@@ -248,6 +251,12 @@ public class RecognizeImageHelper {
 //        String text = recognize(ImageFileLocationDefine.ORIGIN_IMAGES_LOCATION, "1484144038880.jpg");
 //
 //        System.out.println("1484144038880.jpg"+ "的解析结果是：" + text);
+
+
+        File file = new File("/Users/enzo/Desktop/dustbin/a5gC.jpg");
+        FileInputStream fileInputStream = new FileInputStream(file);
+        String result = recognize(fileInputStream);
+        System.out.println(result);
 
     }
 

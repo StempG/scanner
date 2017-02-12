@@ -4,8 +4,6 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.color.ColorSpace;
 import java.awt.image.*;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
 
 /**
@@ -81,30 +79,30 @@ class GreyImages {
         return image;
     }
 
-
-    static BufferedImage greyImages(String fileLocation, String fileName) throws Exception {
-        String absolutePath;
-        String rightPath;
-
-        if (fileLocation.endsWith("/")) {
-            rightPath = fileLocation;
-        } else {
-            rightPath = fileLocation + "/";
-        }
-        absolutePath = rightPath + "origin/" + fileName;
-
-        FileInputStream fin = new FileInputStream(absolutePath);
-        BufferedImage bi = ImageIO.read(fin);
-        GreyImages flt = new GreyImages(bi);
-        flt.changeGrey();
-        flt.getGrey();
-        flt.getBrighten();
-        bi = flt.getProcessedImg();
-        File file = new File(rightPath + "shaped/" + fileName);
-        ImageIO.write(bi, "JPG", file);
-        return bi;
-
-    }
+//
+//    static BufferedImage greyImages(String fileLocation, String fileName) throws Exception {
+//        String absolutePath;
+//        String rightPath;
+//
+//        if (fileLocation.endsWith("/")) {
+//            rightPath = fileLocation;
+//        } else {
+//            rightPath = fileLocation + "/";
+//        }
+//        absolutePath = rightPath + "origin/" + fileName;
+//
+//        FileInputStream fin = new FileInputStream(absolutePath);
+//        BufferedImage bi = ImageIO.read(fin);
+//        GreyImages flt = new GreyImages(bi);
+//        flt.changeGrey();
+//        flt.getGrey();
+//        flt.getBrighten();
+//        bi = flt.getProcessedImg();
+//        File file = new File(rightPath + "shaped/" + fileName);
+//        ImageIO.write(bi, "JPG", file);
+//        return bi;
+//
+//    }
 
 
     static BufferedImage greyImages(InputStream inputStream) throws Exception {
@@ -115,6 +113,13 @@ class GreyImages {
         flt.getGrey();
         flt.getBrighten();
         bi = flt.getProcessedImg();
+
+//        String fileName = Thread.currentThread().getName() + "@" + new Date().getTime();
+//        System.out.println(fileName);
+//        File file = new File("/Users/enzo/Desktop/dustbin/verifyCodes/" + fileName + ".jpg");
+//        ImageIO.write(bi, "JPG", file);
+
+
         return bi;
 
     }

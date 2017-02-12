@@ -13,7 +13,7 @@
 -->
 <configuration scan="true" scanPeriod="60 seconds" debug="false">
     <!--定义日志文件的存储地址 勿在 LogBack 的配置中使用相对路径-->
-    <property name="LOG_HOME" value="log"/>
+    <property name="LOG_HOME" value="/Users/enzo/Desktop/dustbin/result/log-ext"/>
     <timestamp key="bySecond" datePattern="yyyyMMdd'T'HHmmss"/>
     <contextName>logger</contextName>
 

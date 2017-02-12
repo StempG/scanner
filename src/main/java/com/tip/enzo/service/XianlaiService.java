@@ -330,7 +330,7 @@ public class XianlaiService {
         HttpResponse response = client.execute(post);
 
         for (Cookie ck : client.getCookieStore().getCookies()) {
-            System.out.println(ck.getName() + "=" + ck.getValue());
+//            System.out.println(ck.getName() + "=" + ck.getValue());
         }
 
         if (response.getStatusLine().getStatusCode() >= 200 && response.getStatusLine().getStatusCode() < 300) {
@@ -404,7 +404,7 @@ public class XianlaiService {
             if (cookie.getName().equals("acw_tc")) {
                 acw_tc = cookie.getValue();
             }
-            System.out.println(cookie.getName() + "=" + cookie.getValue());
+//            System.out.println(cookie.getName() + "=" + cookie.getValue());
 
         }
 
@@ -433,7 +433,7 @@ public class XianlaiService {
 
         String SHRIOSESSIONID = "";
         for (Cookie cookie : client.getCookieStore().getCookies()) {
-            System.out.println(cookie.getName() + "=" + cookie.getValue());
+//            System.out.println(cookie.getName() + "=" + cookie.getValue());
             if (cookie.getName().equals("SHRIOSESSIONID")) {
                 SHRIOSESSIONID = cookie.getValue();
             }

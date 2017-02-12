@@ -6,9 +6,8 @@ import com.tip.enzo.service.XianlaiService;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 /**
@@ -37,16 +36,19 @@ public class Main {
         XianlaiService xianlaiService = context.getBean(XianlaiService.class);
 
 
-        ThreadPoolExecutor executor = new ThreadPoolExecutor(15, 20, 300000, TimeUnit.MILLISECONDS,
-                new ArrayBlockingQueue<>(15));
+        ExecutorService pool = Executors.newFixedThreadPool(10);//创建一个固定大小为15的线程池
 
-        for (int i = 0; i < 15; i++) {
-            ScannerService scanner = new ScannerService(xianlaiService, tianMaService);
-            executor.execute(scanner);
+        try {
+            for (int i = 0; i < 10; i++) {
+                pool.submit(new ScannerService(xianlaiService, tianMaService));
+            }
+
+
+        } catch (Exception e) {
+            pool.shutdown();
+            e.printStackTrace();
+            System.exit(0);
         }
-
-        executor.shutdown();
-
 
 
     }

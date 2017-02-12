@@ -1,6 +1,7 @@
 package com.tip.enzo.service;
 
 import com.tip.enzo.common.ImageVerifyCodeResult;
+import com.tip.enzo.helper.RecognizeImageHelper;
 import com.tip.enzo.model.LoginResultModel;
 import com.tip.enzo.model.UserInfoModel;
 import org.apache.commons.lang3.StringUtils;
@@ -42,7 +43,7 @@ public class ScannerService implements Runnable {
     }
 
 
-    private static void doScan(TianMaService tianMaService, XianlaiService xianlaiService) {
+    private synchronized void doScan(TianMaService tianMaService, XianlaiService xianlaiService) {
         while (true) {
             try {
 
@@ -91,7 +92,7 @@ public class ScannerService implements Runnable {
     }
 
 
-    private static void process(TianMaService tianMaService, XianlaiService xianlaiService, List<String> phoneNumbers) throws Exception {
+    private void process(TianMaService tianMaService, XianlaiService xianlaiService, List<String> phoneNumbers) throws Exception {
         for (String phoneNumber : phoneNumbers) {
             logger_deal.info("开始处理号码：" + phoneNumber);
 
@@ -107,9 +108,12 @@ public class ScannerService implements Runnable {
             while (StringUtils.isBlank(imgVerifyCode)) {
                 retryTime++;
                 InputStream inputStream = xianlaiService.fetchVerifyCodeImages(cookie);
-                imgVerifyCode = xianlaiService.decodeVerifyCode(inputStream);
+                imgVerifyCode = RecognizeImageHelper.recognize(inputStream);
                 if (StringUtils.isBlank(imgVerifyCode) || imgVerifyCode.length() != imageSplitPieces) {
                     continue;
+                }
+                if (retryTime > MAX_IMAGE_DECODE_TRY_TIME) {
+                    break;
                 }
                 imageVerifyCodeResult =
                         xianlaiService.verifyImageCodeAndSendMsg(phoneNumber, imgVerifyCode, cookie);
@@ -124,9 +128,7 @@ public class ScannerService implements Runnable {
                 if (imageVerifyCodeResult.equals(ImageVerifyCodeResult.SUCCESS)) {
                     break;
                 }
-                if (retryTime > MAX_IMAGE_DECODE_TRY_TIME) {
-                    break;
-                }
+
 
             }
 
@@ -182,7 +184,7 @@ public class ScannerService implements Runnable {
         }
     }
 
-    private static ConcurrentHashMap<String, String> getLoginParams(XianlaiService xianlaiService) {
+    private ConcurrentHashMap<String, String> getLoginParams(XianlaiService xianlaiService) {
         try {
             return xianlaiService.getUserLoginPage();
         } catch (Exception e) {
@@ -193,7 +195,7 @@ public class ScannerService implements Runnable {
     }
 
 
-    private static LoginResultModel getLoginResult(XianlaiService xianlaiService, String phone, Map<String, String> params) {
+    private LoginResultModel getLoginResult(XianlaiService xianlaiService, String phone, Map<String, String> params) {
         if (params == null) {
             return null;
         }
