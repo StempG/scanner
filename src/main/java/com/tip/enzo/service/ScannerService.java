@@ -72,7 +72,7 @@ public class ScannerService implements Runnable {
                 /*
                  * step2.--- 开始处理
                  */
-                process(tianMaService, xianlaiService, phoneNumbers);
+                process(xianlaiService, phoneNumbers);
 
 
 
@@ -92,11 +92,13 @@ public class ScannerService implements Runnable {
     }
 
 
-    private void process(TianMaService tianMaService, XianlaiService xianlaiService, List<String> phoneNumbers) throws Exception {
+    private void process(XianlaiService xianlaiService, List<String> phoneNumbers) throws Exception {
         for (String phoneNumber : phoneNumbers) {
             logger_deal.info("开始处理号码：" + phoneNumber);
 
             String cookie = xianlaiService.getForgetPasswordDocument();
+
+            System.out.println("当前号码为：" + phoneNumber + "   当前线程为：" + Thread.currentThread().getName() + "， 第一步cookie为：" + cookie);
 
             /*
              * 1.获取验证码图片

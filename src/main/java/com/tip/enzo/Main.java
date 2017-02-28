@@ -36,10 +36,11 @@ public class Main {
         XianlaiService xianlaiService = context.getBean(XianlaiService.class);
 
 
-        ExecutorService pool = Executors.newFixedThreadPool(10);//创建一个固定大小为15的线程池
+        int threadNumber = 3;
+        ExecutorService pool = Executors.newFixedThreadPool(threadNumber);//创建一个固定大小为15的线程池
 
         try {
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < threadNumber; i++) {
                 pool.submit(new ScannerService(xianlaiService, tianMaService));
             }
 
@@ -49,8 +50,6 @@ public class Main {
             e.printStackTrace();
             System.exit(0);
         }
-
-
     }
 
 

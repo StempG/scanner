@@ -144,6 +144,11 @@ public class TianMaService {
                     continue;
                 }
 
+                if (entity.equals("False:此号码已经被释放")) {
+                    break;
+                }
+
+
                 if (entity.contains("MSG")) {
                     String[] strings = entity.split("&");
                     return getVerifyCodeFromContent(strings[1]);
